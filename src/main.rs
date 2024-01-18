@@ -9,7 +9,30 @@ use crate::ray::Point3;
 use crate::ray::Ray;
 use crate::vec3::Vec3;
 
+fn hit_sphere(center: Point3, radius: f64, ray: Ray) -> Option<f64>{
+    let oc = ray.orig() - center;
+
+    let a = Vec3::dot(&ray.dir(), &ray.dir());
+    let b = 2.0 * Vec3::dot(&oc, &ray.dir());
+    let c = Vec3::dot(&oc, &oc) - radius * radius;
+
+    let discriminant = b * b - 4.0 * a * c;
+
+    match discriminant{
+        0.0.. => Some((-b - discriminant.sqrt()) / (2.0 * a)),
+        _ => None
+    }
+}
+
 fn ray_color(ray: Ray) -> Color {
+    let center = Point3::new(0.0, 0.0, -1.0);
+    let t = hit_sphere(center, 0.5, ray);
+
+    if let Some(t) = t {
+        let n = Vec3::unit(&(ray.at(t) - center));
+        return 0.5 * (n + Vec3::new(1.0, 1.0, 1.0));
+    }
+
     let unit_dir = ray.dir().unit();
     let a = 0.5 * (unit_dir.y() + 1.0);
 
@@ -20,7 +43,7 @@ fn main() -> std::io::Result<()> {
     let aspect_ratio = 16.0 / 9.0;
 
     // Image size
-    let image_height: u64 = 2160;
+    let image_height: u64 = 1080;
     #[allow(
         clippy::cast_possible_truncation,
         clippy::cast_sign_loss,
