@@ -7,40 +7,23 @@ mod vec3;
 
 use std::{fs::File, io::Write};
 
+use hittable::Hittable;
+
 use crate::color::Color;
+use crate::hittable::List;
 use crate::point3::Point3;
 use crate::ray::Ray;
+use crate::shapes::Sphere;
 use crate::vec3::Vec3;
 
-fn hit_sphere(center: Point3, radius: f64, ray: Ray) -> Option<f64> {
-    let oc: Vec3 = (ray.orig() - center).into();
-
-    let a = ray.dir().len_squared();
-    let half_b = Vec3::dot(oc, ray.dir());
-    let c = oc.len_squared() - radius * radius;
-
-    #[allow(clippy::suspicious_operation_groupings)]
-    let d = (half_b * half_b) - (a * c);
-
-    match d {
-        d if (0.0..).contains(&d) => Some((-half_b - d.sqrt()) / a),
-        _ => None,
-    }
-}
-
-fn ray_color(ray: Ray) -> Color {
-    let center = Point3::new(0.0, 0.0, -1.0);
-    let t = hit_sphere(center, 0.5, ray);
-
-    if let Some(t) = t {
-        let hit_point = ray.at(t) - center;
-        let n = Vec3::unit(hit_point.into());
-        return (0.5 * (n + Vec3::new(1.0, 1.0, 1.0))).into();
+fn ray_color(ray: Ray, obj: &dyn Hittable) -> Color {
+    if let Some(record) = obj.hit(&ray, 0.0, f64::INFINITY) {
+        let color_normal: Color = record.normal().into();
+        return 0.5 * (color_normal + Color::new(1.0, 1.0, 1.0));
     }
 
     let unit_dir = ray.dir().unit();
     let a = 0.5 * (unit_dir.y() + 1.0);
-
     (1.0 - a) * Color::new(1.0, 1.0, 1.0) + a * Color::new(0.5, 0.7, 1.0)
 }
 
@@ -81,6 +64,13 @@ fn main() -> std::io::Result<()> {
     let vp_upper_left = cam - Vec3::new(0.0, 0.0, FOCAL_LENGTH) - vp_u / 2.0 - vp_v / 2.0;
     let pixel00 = vp_upper_left + (pixel_delta_u + pixel_delta_v) * 0.5;
 
+    // World elements
+    let mut world = List::new();
+
+    world.add(Sphere::new_world_obj(0.0, 0.0, -1.0, 0.5));
+    world.add(Sphere::new_world_obj(0.5, 0.2, -1.0, 0.3));
+    world.add(Sphere::new_world_obj(0.0, -100.5, -1.0, 100.0));
+
     // Get file
     let mut file = File::create("img.ppm")?;
 
@@ -115,7 +105,7 @@ fn main() -> std::io::Result<()> {
 
             let ray = Ray::new(cam, ray_dir);
 
-            let color = ray_color(ray);
+            let color = ray_color(ray, &world);
 
             color.write(&mut file)?;
         }
