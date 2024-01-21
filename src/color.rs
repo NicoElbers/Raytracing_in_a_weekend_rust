@@ -76,11 +76,17 @@ impl Color {
     pub fn write(&self, file: &mut File) -> std::io::Result<()> {
         let colors = *self * 255.0;
 
+        #[cfg(debug_assertions)]
         assert!(colors.r() <= 255.0);
+        #[cfg(debug_assertions)]
         assert!(colors.r() >= 0.0);
+        #[cfg(debug_assertions)]
         assert!(colors.g() <= 255.0);
+        #[cfg(debug_assertions)]
         assert!(colors.g() >= 0.0);
+        #[cfg(debug_assertions)]
         assert!(colors.b() <= 255.0);
+        #[cfg(debug_assertions)]
         assert!(colors.b() >= 0.0);
 
         #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
