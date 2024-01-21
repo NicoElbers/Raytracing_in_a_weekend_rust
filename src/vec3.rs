@@ -1,4 +1,5 @@
 use std::{
+    f64::EPSILON,
     fmt::Display,
     ops::{Add, Div, Mul, Neg, Sub},
 };
@@ -163,5 +164,15 @@ impl Vec3 {
     #[must_use]
     pub fn unit(self) -> Self {
         self / self.len()
+    }
+
+    pub fn is_unit(self) -> bool {
+        let unit_vec = self.unit();
+
+        let x = (-EPSILON..=EPSILON).contains(&(self.x - unit_vec.x));
+        let y = (-EPSILON..=EPSILON).contains(&(self.y - unit_vec.y));
+        let z = (-EPSILON..=EPSILON).contains(&(self.z - unit_vec.z));
+
+        x && y && z
     }
 }
