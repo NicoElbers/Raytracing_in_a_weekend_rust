@@ -33,9 +33,9 @@ fn ray_color(ray: Ray) -> Color {
     let t = hit_sphere(center, 0.5, ray);
 
     if let Some(t) = t {
-        let n = Vec3::unit(ray.at(t) - center);
-        let into = (0.5 * (n + Vec3::new(1.0, 1.0, 1.0))).into();
-        return into;
+        let hit_point = ray.at(t) - center;
+        let n = Vec3::unit(hit_point.into());
+        return (0.5 * (n + Vec3::new(1.0, 1.0, 1.0))).into();
     }
 
     let unit_dir = ray.dir().unit();
