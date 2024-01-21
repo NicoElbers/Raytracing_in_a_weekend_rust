@@ -31,7 +31,7 @@ fn main() -> std::io::Result<()> {
     const ASPECT_RATIO: f64 = 16.0 / 9.0;
 
     // Image size
-    const IMAGE_HEIGHT: u64 = 1080;
+    const IMAGE_HEIGHT: u64 = 2160;
     #[allow(
         clippy::cast_possible_truncation,
         clippy::cast_sign_loss,
@@ -67,9 +67,9 @@ fn main() -> std::io::Result<()> {
     // World elements
     let mut world = List::new();
 
+    world.add(Sphere::new_world_obj(0.0, 0.0, -2.0, 1.4));
     world.add(Sphere::new_world_obj(0.0, 0.0, -1.0, 0.5));
-    world.add(Sphere::new_world_obj(0.5, 0.2, -1.0, 0.3));
-    world.add(Sphere::new_world_obj(0.0, -100.5, -1.0, 100.0));
+    world.add(Sphere::new_world_obj(0.0, -105.0, -1.0, 100.0));
 
     // Get file
     let mut file = File::create("img.ppm")?;
