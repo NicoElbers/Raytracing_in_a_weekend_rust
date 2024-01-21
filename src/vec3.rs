@@ -3,6 +3,8 @@ use std::{
     ops::{Add, Div, Mul, Sub},
 };
 
+use crate::{color::Color, point3::Point3};
+
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Vec3 {
     x: f64,
@@ -10,10 +12,26 @@ pub struct Vec3 {
     z: f64,
 }
 
-impl Add<&Vec3> for Vec3 {
-    type Output = Vec3;
+impl From<Vec3> for Color {
+    fn from(value: Vec3) -> Self {
+        Self::new(value.x(), value.y(), value.z())
+    }
+}
 
-    fn add(self, vec: &Vec3) -> Self::Output {
+impl From<Vec3> for Point3 {
+    fn from(value: Vec3) -> Self {
+        Self::new(value.x(), value.y(), value.z())
+    }
+}
+
+impl<T> Add<T> for Vec3
+where
+    T: Into<Self> + From<Self>,
+{
+    type Output = Self;
+
+    fn add(self, vec: T) -> Self::Output {
+        let vec: Self = Into::into(vec);
         Self {
             x: self.x + vec.x,
             y: self.y + vec.y,
@@ -22,34 +40,14 @@ impl Add<&Vec3> for Vec3 {
     }
 }
 
-impl Add<Vec3> for Vec3 {
-    type Output = Vec3;
+impl<T> Sub<T> for Vec3
+where
+    T: Into<Self>,
+{
+    type Output = Self;
 
-    fn add(self, vec: Vec3) -> Self::Output {
-        Self {
-            x: self.x + vec.x,
-            y: self.y + vec.y,
-            z: self.z + vec.z,
-        }
-    }
-}
-
-impl Sub<&Vec3> for Vec3 {
-    type Output = Vec3;
-
-    fn sub(self, vec: &Vec3) -> Self::Output {
-        Self {
-            x: self.x - vec.x,
-            y: self.y - vec.y,
-            z: self.z - vec.z,
-        }
-    }
-}
-
-impl Sub<Vec3> for Vec3 {
-    type Output = Vec3;
-
-    fn sub(self, vec: Vec3) -> Self::Output {
+    fn sub(self, rhs: T) -> Self::Output {
+        let vec: Self = Into::into(rhs);
         Self {
             x: self.x - vec.x,
             y: self.y - vec.y,
@@ -59,7 +57,7 @@ impl Sub<Vec3> for Vec3 {
 }
 
 impl Mul<f64> for Vec3 {
-    type Output = Vec3;
+    type Output = Self;
 
     fn mul(self, scalar: f64) -> Self::Output {
         Self {
@@ -79,7 +77,7 @@ impl Mul<Vec3> for f64 {
 }
 
 impl Div<f64> for Vec3 {
-    type Output = Vec3;
+    type Output = Self;
 
     fn div(self, scalar: f64) -> Self::Output {
         Self {
@@ -98,22 +96,22 @@ impl Display for Vec3 {
 
 impl Vec3 {
     #[must_use]
-    pub fn new(x: f64, y: f64, z: f64) -> Self {
+    pub const fn new(x: f64, y: f64, z: f64) -> Self {
         Self { x, y, z }
     }
 
     #[must_use]
-    pub fn x(&self) -> f64 {
+    pub const fn x(&self) -> f64 {
         self.x
     }
 
     #[must_use]
-    pub fn y(&self) -> f64 {
+    pub const fn y(&self) -> f64 {
         self.y
     }
 
     #[must_use]
-    pub fn z(&self) -> f64 {
+    pub const fn z(&self) -> f64 {
         self.z
     }
 
@@ -128,12 +126,21 @@ impl Vec3 {
     }
 
     #[must_use]
-    pub fn dot(&self, vec: &Vec3) -> f64 {
-        self.x * vec.x + self.y * vec.y + self.z * vec.z
+    pub fn dot<T>(lhs: T, rhs: T) -> f64
+    where
+        T: Into<Self>,
+    {
+        let rhs: Self = Into::into(rhs);
+        let lhs: Self = Into::into(lhs);
+        lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z
     }
 
     #[must_use]
-    pub fn cross(&self, rhs: &Vec3) -> Self {
+    pub fn cross<T>(&self, rhs: T) -> Self
+    where
+        T: Into<Self>,
+    {
+        let rhs: Self = Into::into(rhs);
         Self {
             x: self.y * rhs.z - self.z * rhs.y,
             y: self.z * rhs.x - self.x * rhs.z,
@@ -142,7 +149,7 @@ impl Vec3 {
     }
 
     #[must_use]
-    pub fn unit(&self) -> Self {
-        *self / self.len()
+    pub fn unit(self) -> Self {
+        self / self.len()
     }
 }
