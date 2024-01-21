@@ -1,7 +1,7 @@
 use std::{
     fs::File,
     io::Write,
-    ops::{Add, Mul},
+    ops::{Add, Div, Mul},
 };
 
 use crate::vec3::Vec3;
@@ -53,6 +53,18 @@ impl Mul<Color> for f64 {
 
     fn mul(self, scalar: Color) -> Self::Output {
         scalar * self
+    }
+}
+
+impl Div<f64> for Color {
+    type Output = Self;
+
+    fn div(self, scalar: f64) -> Self::Output {
+        Self {
+            r: self.r / scalar,
+            g: self.g / scalar,
+            b: self.b / scalar,
+        }
     }
 }
 
