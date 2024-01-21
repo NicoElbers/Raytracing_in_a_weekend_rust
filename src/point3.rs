@@ -1,4 +1,4 @@
-use std::ops::{Add, Mul, Sub};
+use std::{ops::{Add, Mul, Sub, Div}, fmt::Display};
 
 use crate::vec3::Vec3;
 
@@ -73,3 +73,22 @@ impl Mul<Point3> for f64 {
         scalar * self
     }
 }
+
+impl Div<f64> for Point3 {
+    type Output = Self;
+
+    fn div(self, scalar: f64) -> Self::Output {
+        Self {
+            x: self.x / scalar,
+            y: self.y / scalar,
+            z: self.z / scalar,
+        }
+    }
+}
+
+impl Display for Point3 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {} {}", self.x, self.y, self.z)
+    }
+}
+
