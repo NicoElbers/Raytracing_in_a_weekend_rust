@@ -1,4 +1,5 @@
 use std::{
+    fmt::Display,
     fs::File,
     io::Write,
     ops::{Add, Div, Mul},
@@ -65,6 +66,12 @@ impl Div<f64> for Color {
             g: self.g / scalar,
             b: self.b / scalar,
         }
+    }
+}
+
+impl Display for Color {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {} {}", self.r, self.g, self.b)
     }
 }
 
