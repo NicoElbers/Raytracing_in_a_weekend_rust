@@ -166,12 +166,12 @@ impl Vec3 {
         self / self.len()
     }
 
-    pub fn is_unit(self) -> bool {
+    pub fn is_unit(self, delta: f64) -> bool {
         let unit_vec = self.unit();
 
-        let x = (-EPSILON..=EPSILON).contains(&(self.x - unit_vec.x));
-        let y = (-EPSILON..=EPSILON).contains(&(self.y - unit_vec.y));
-        let z = (-EPSILON..=EPSILON).contains(&(self.z - unit_vec.z));
+        let x = (-delta..=delta).contains(&(self.x - unit_vec.x));
+        let y = (-delta..=delta).contains(&(self.y - unit_vec.y));
+        let z = (-delta..=delta).contains(&(self.z - unit_vec.z));
 
         x && y && z
     }
