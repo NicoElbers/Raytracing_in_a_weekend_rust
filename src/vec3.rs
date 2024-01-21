@@ -1,6 +1,6 @@
 use std::{
     fmt::Display,
-    ops::{Add, Div, Mul, Sub},
+    ops::{Add, Div, Mul, Neg, Sub},
 };
 
 use crate::{color::Color, point3::Point3};
@@ -52,6 +52,18 @@ where
             x: self.x - vec.x,
             y: self.y - vec.y,
             z: self.z - vec.z,
+        }
+    }
+}
+
+impl Neg for Vec3 {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        Self {
+            x: -self.x,
+            y: -self.y,
+            z: -self.z,
         }
     }
 }
