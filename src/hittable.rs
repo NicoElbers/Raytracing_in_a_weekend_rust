@@ -6,6 +6,10 @@ use crate::point3::Point3;
 use crate::ray::Ray;
 use crate::vec3::Vec3;
 
+pub trait Hittable: Debug {
+    fn hit(&self, r: &Ray, ray_tmin: f64, ray_tmax: f64) -> Option<HitRecord>;
+}
+
 #[derive(Default, Debug, Clone, Copy)]
 pub struct HitRecord {
     point: Point3,
@@ -43,8 +47,12 @@ impl HitRecord {
     }
 
     fn face_normal(r: Ray, outward_normal: Vec3) -> (bool, Vec3) {
-        #[cfg(debug_assertions)]
-        assert!(outward_normal.is_unit());
+        debug_assert!(
+            outward_normal.is_unit(0.1),
+            "Outward normal len is {}\nfull vector {}",
+            outward_normal.len(),
+            outward_normal
+        );
 
         let front_face = Vec3::dot(r.dir(), outward_normal) < 0.0;
 
@@ -54,10 +62,6 @@ impl HitRecord {
             (false, -outward_normal)
         }
     }
-}
-
-pub trait Hittable: Debug {
-    fn hit(&self, r: &Ray, ray_tmin: f64, ray_tmax: f64) -> Option<HitRecord>;
 }
 
 #[derive(Default, Debug, Clone)]
