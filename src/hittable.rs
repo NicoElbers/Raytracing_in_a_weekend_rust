@@ -83,8 +83,10 @@ impl List {
     pub fn add(&mut self, obj: Rc<dyn Hittable>) {
         self.objects.push(obj);
     }
+}
 
-    pub fn hit_closest(&self, ray: &Ray, ray_tmin: f64, ray_tmax: f64) -> Option<HitRecord> {
+impl Hittable for List {
+    fn hit(&self, ray: &Ray, ray_tmin: f64, ray_tmax: f64) -> Option<HitRecord> {
         self.objects
             .iter()
             .filter_map(|obj| obj.hit(ray, ray_tmin, ray_tmax))
