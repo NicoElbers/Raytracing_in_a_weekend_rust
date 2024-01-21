@@ -15,8 +15,9 @@ impl Ray {
         }
     }
 
-    pub fn at(&self, t: f64) -> Vec3 {
-        self.dir * t + self.orig
+    pub fn at(&self, t: f64) -> Point3 {
+        let ray_point: Point3 = (self.dir() * t).into();
+        ray_point + self.orig()
     }
 
     pub const fn orig(&self) -> Point3 {
