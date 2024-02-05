@@ -1,6 +1,9 @@
-use std::{ops::{Add, Mul, Sub, Div}, fmt::Display};
+use std::{
+    fmt::Display,
+    ops::{Add, Div, Mul, Sub},
+};
 
-use crate::vec3::Vec3;
+use crate::space::vec3::Vec3;
 
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Point3 {
@@ -10,6 +13,7 @@ pub struct Point3 {
 }
 
 impl Point3 {
+    #[must_use]
     pub const fn new(x: f64, y: f64, z: f64) -> Self {
         Self { x, y, z }
     }
@@ -91,4 +95,3 @@ impl Display for Point3 {
         write!(f, "{} {} {}", self.x, self.y, self.z)
     }
 }
-

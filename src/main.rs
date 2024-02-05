@@ -1,115 +1,79 @@
-mod color;
-mod hittable;
-mod point3;
-mod ray;
-mod shapes;
-mod vec3;
+// TODO: FUCKING FINISH THE FUCKER
+// TODO: Factor all the raytrace code out to a module
+// TODO: Implement a winit application to show progress while we're rendering
+// TODO: Render to png instead of ppm
+// TODO: Make this motherfucker a beast by implementing WebGPU rendering
 
-use std::{fs::File, io::Write};
+mod raytracing;
+mod space;
+mod util;
 
-use hittable::Hittable;
+use std::f64::consts::PI;
+use std::rc::Rc;
 
-use crate::color::Color;
-use crate::hittable::List;
-use crate::point3::Point3;
-use crate::ray::Ray;
-use crate::shapes::Sphere;
-use crate::vec3::Vec3;
+use crate::raytracing::shapes::sphere::Sphere;
+use raytracing::camera::Camera;
+use raytracing::color::Color;
+use raytracing::hittable::Scene;
+use raytracing::materials::{Dielectric, Lambertian, Metal};
+use space::point3::Point3;
 
-fn ray_color(ray: Ray, obj: &dyn Hittable) -> Color {
-    if let Some(record) = obj.hit(&ray, 0.0, f64::INFINITY) {
-        let color_normal: Color = record.normal().into();
-        return 0.5 * (color_normal + Color::new(1.0, 1.0, 1.0));
-    }
+const ASPECT_RATIO: f64 = 16.0 / 9.0;
 
-    let unit_dir = ray.dir().unit();
-    let a = 0.5 * (unit_dir.y() + 1.0);
-    (1.0 - a) * Color::new(1.0, 1.0, 1.0) + a * Color::new(0.5, 0.7, 1.0)
-}
+// Image size
+const IMAGE_HEIGHT: u64 = 400;
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_precision_loss
+)]
+const IMAGE_WIDTH: u64 = (IMAGE_HEIGHT as f64 * ASPECT_RATIO) as u64;
+
+// Camera
+const FOCAL_LENGTH: f64 = 1.0;
+const VIEWPORT_HEIGHT: f64 = 2.0;
+
+const FOV: f64 = 90.;
+
+const SAMPLE_SQRT: usize = 10;
+const MAX_DEPTH: usize = 50;
 
 fn main() -> std::io::Result<()> {
-    const ASPECT_RATIO: f64 = 16.0 / 9.0;
+    let cam = Camera::new(
+        IMAGE_HEIGHT,
+        IMAGE_WIDTH,
+        MAX_DEPTH,
+        FOCAL_LENGTH,
+        FOV,
+        Point3::default(),
+    );
 
-    // Image size
-    const IMAGE_HEIGHT: u64 = 2160;
-    #[allow(
-        clippy::cast_possible_truncation,
-        clippy::cast_sign_loss,
-        clippy::cast_precision_loss
-    )]
-    const IMAGE_WIDTH: u64 = (IMAGE_HEIGHT as f64 * ASPECT_RATIO) as u64;
+    // Materials
+    let mat_ground = Rc::new(Lambertian::new(Color::new(0.8, 0.8, 0.0)));
+    // let mat_center = Rc::new(Lambertian::new(Color::new(0.7, 0.3, 0.3)));
+    let mat_center = Rc::new(Dielectric::new(1.5));
+    let mat_left = Rc::new(Lambertian::new(Color::new(0., 0., 1.)));
+    let mat_right = Rc::new(Lambertian::new(Color::new(1., 0., 0.)));
 
-    // Camera
-    const FOCAL_LENGTH: f64 = 1.0;
-    const VIEWPORT_HEIGHT: f64 = 2.0;
-    #[allow(
-        clippy::cast_possible_truncation,
-        clippy::cast_sign_loss,
-        clippy::cast_precision_loss
-    )]
-    const VIEWPORT_WIDTH: f64 = VIEWPORT_HEIGHT * (IMAGE_WIDTH as f64 / IMAGE_HEIGHT as f64);
-    let cam = Point3::default();
-
-    // Help vectors
-    let vp_u = Vec3::new(VIEWPORT_WIDTH, 0.0, 0.0);
-    let vp_v = Vec3::new(0.0, -VIEWPORT_HEIGHT, 0.0);
-
-    // Calculate deltas
-    #[allow(clippy::cast_precision_loss)]
-    let pixel_delta_u = vp_u / IMAGE_WIDTH as f64;
-    #[allow(clippy::cast_precision_loss)]
-    let pixel_delta_v = vp_v / IMAGE_HEIGHT as f64;
-
-    // Calculate first pixel
-    let vp_upper_left = cam - Vec3::new(0.0, 0.0, FOCAL_LENGTH) - vp_u / 2.0 - vp_v / 2.0;
-    let pixel00 = vp_upper_left + (pixel_delta_u + pixel_delta_v) * 0.5;
+    let r = f64::cos(PI / 4.);
 
     // World elements
-    let mut world = List::new();
+    let mut world = Scene::new();
 
-    world.add(Sphere::new_world_obj(0.0, 0.0, -2.0, 1.4));
-    world.add(Sphere::new_world_obj(0.0, 0.0, -1.0, 0.5));
-    world.add(Sphere::new_world_obj(0.0, -105.0, -1.0, 100.0));
+    // world.add(Sphere::new_world_obj(0., 0., -5., 1.4));
+    // world.add(Sphere::new_world_obj(0., 0., -1., 0.2));
+    // world.add(Sphere::new_world_obj(-1., 1., -1.2, 0.5));
+    // world.add(Sphere::new_world_obj(0., -105., 0., 100.));
 
-    // Get file
-    let mut file = File::create("img.ppm")?;
+    // world.add(Sphere::new_world_obj(0., -100.5, -1., 100., mat_ground));
+    // world.add(Sphere::new_world_obj(0., 0., -1., -0.5, mat_center));
+    // world.add(Sphere::new_world_obj(-1., 0., -1., 0.5, mat_left));
+    // world.add(Sphere::new_world_obj(1., 0., -1., 0.5, mat_right));
 
-    println!("Making an image of format:\n\t{IMAGE_WIDTH} by {IMAGE_HEIGHT}");
+    world.add(Sphere::new_world_obj(-r, 0., -1., r, mat_left));
+    world.add(Sphere::new_world_obj(r, 0., -1., r, mat_right));
 
-    // Renderer
-    write!(file, "P3\n{IMAGE_WIDTH} {IMAGE_HEIGHT}\n255\n")?;
-
-    let mut last_prog: u64 = 0;
-    for j in 0..IMAGE_HEIGHT {
-        // Progress
-        #[allow(
-            clippy::cast_possible_truncation,
-            clippy::cast_sign_loss,
-            clippy::cast_precision_loss
-        )]
-        let prog = ((j as f64 / IMAGE_HEIGHT as f64) * 100.0) as u64;
-        if last_prog != prog {
-            println!("[ INFO ] {prog}% done");
-            last_prog = prog;
-        }
-
-        for i in 0..IMAGE_WIDTH {
-            #[allow(
-                clippy::cast_possible_truncation,
-                clippy::cast_sign_loss,
-                clippy::cast_precision_loss
-            )]
-            let pixel_center = pixel00 + (i as f64 * pixel_delta_u) + (j as f64 * pixel_delta_v);
-            let ray_dir: Vec3 = (pixel_center - cam).into();
-            let ray_dir = ray_dir.unit();
-
-            let ray = Ray::new(cam, ray_dir);
-
-            let color = ray_color(ray, &world);
-
-            color.write(&mut file)?;
-        }
-    }
+    cam.render(&world, SAMPLE_SQRT)?;
 
     Ok(())
 }
