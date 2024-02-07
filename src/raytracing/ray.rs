@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::space::point3::Point3;
 use crate::space::vec3::Vec3;
 
@@ -5,6 +7,12 @@ use crate::space::vec3::Vec3;
 pub struct Ray {
     orig: Point3,
     dir: Vec3,
+}
+
+impl Display for Ray {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "origin: {}, dir: {}", self.orig, self.dir)
+    }
 }
 
 impl Ray {
@@ -33,7 +41,7 @@ impl Ray {
     }
 
     #[must_use]
-    pub fn offset(self, offset: &Vec3) -> Self {
+    pub fn offset_dir(self, offset: &Vec3) -> Self {
         let dir = self.dir + *offset;
         let dir = dir.unit();
 

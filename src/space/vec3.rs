@@ -89,6 +89,24 @@ impl Mul<Vec3> for f64 {
     }
 }
 
+impl Mul<usize> for Vec3 {
+    type Output = Self;
+
+    fn mul(self, scalar: usize) -> Self::Output {
+        #[allow(clippy::cast_precision_loss)]
+        let scalar = scalar as f64;
+        self * scalar
+    }
+}
+
+impl Mul<Vec3> for usize {
+    type Output = Vec3;
+
+    fn mul(self, vec: Vec3) -> Self::Output {
+        vec * self
+    }
+}
+
 impl Div<f64> for Vec3 {
     type Output = Self;
 
@@ -247,5 +265,14 @@ impl Vec3 {
         let out_parallel = -f64::sqrt(f64::abs(1. - out_perpendicular.len_squared())) * n;
 
         out_perpendicular + out_parallel
+    }
+
+    pub fn random_vec_in_unit_disk(rand: &mut XorShift) -> Self {
+        loop {
+            let vec = Self::new(rand.next_bound(-1., 1.), rand.next_bound(-1., 1.), 0.);
+            if vec.len_squared() < 1. {
+                return vec;
+            }
+        }
     }
 }

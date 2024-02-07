@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 use std::fmt::Debug;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::raytracing::materials::Material;
 use crate::raytracing::ray::Ray;
@@ -8,7 +8,7 @@ use crate::space::point3::Point3;
 use crate::space::vec3::Vec3;
 use crate::util::interval::Interval;
 
-pub trait Hittable: Debug {
+pub trait Hittable: Debug + Send + Sync {
     fn hit(&self, r: &Ray, inter: &Interval) -> Option<HitRecord>;
 }
 
@@ -16,14 +16,14 @@ pub trait Hittable: Debug {
 pub struct HitRecord {
     point: Point3,
     normal: Vec3,
-    mat: Rc<dyn Material>,
+    mat: Arc<dyn Material>,
     time: f64,
     front_face: bool,
 }
 
 impl HitRecord {
     #[must_use]
-    pub fn new(point: Point3, normal: Vec3, time: f64, ray: Ray, mat: Rc<dyn Material>) -> Self {
+    pub fn new(point: Point3, normal: Vec3, time: f64, ray: Ray, mat: Arc<dyn Material>) -> Self {
         let (front_face, normal) = Self::face_normal(&ray, &normal);
 
         Self {
@@ -46,6 +46,7 @@ impl HitRecord {
     }
 
     #[must_use]
+    #[allow(dead_code)]
     pub const fn time(&self) -> f64 {
         self.time
     }
@@ -55,7 +56,7 @@ impl HitRecord {
         self.front_face
     }
 
-    pub fn mat(&self) -> Rc<dyn Material> {
+    pub fn mat(&self) -> Arc<dyn Material> {
         self.mat.clone()
     }
 
@@ -81,35 +82,55 @@ impl HitRecord {
 
 pub type SceneObject = dyn Hittable;
 
-#[derive(Default, Debug, Clone)]
-pub struct Scene {
-    objects: Vec<Rc<SceneObject>>,
+#[derive(Debug, Default, Clone)]
+pub struct SceneBuilder {
+    objects: Vec<Arc<SceneObject>>,
 }
 
-impl Scene {
-    #[must_use]
+impl SceneBuilder {
     pub fn new() -> Self {
         Self {
             objects: Vec::new(),
         }
     }
 
-    #[must_use]
-    pub fn objects(&self) -> &Vec<Rc<SceneObject>> {
-        &self.objects
+    pub fn build(self) -> Arc<Scene> {
+        if self.objects.is_empty() {
+            let non_empty_objects: Vec<Arc<SceneObject>> = vec![Arc::new(Empty::default())];
+
+            debug_assert!(!non_empty_objects.is_empty());
+
+            Arc::new(Scene {
+                objects: non_empty_objects,
+            })
+        } else {
+            Arc::new(Scene {
+                objects: self.objects,
+            })
+        }
     }
 
-    pub fn clear(&mut self) {
-        self.objects.clear();
-    }
-
-    pub fn add(&mut self, obj: Rc<SceneObject>) {
+    pub fn add(&mut self, obj: Arc<SceneObject>) {
         self.objects.push(obj);
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Scene {
+    objects: Vec<Arc<SceneObject>>,
+}
+
+impl Scene {
+    #[must_use]
+    pub fn objects(&self) -> &Vec<Arc<SceneObject>> {
+        &self.objects
     }
 }
 
 impl Hittable for Scene {
     fn hit(&self, ray: &Ray, inter: &Interval) -> Option<HitRecord> {
+        debug_assert!(!self.objects.is_empty(), "Cannot hit if scene is empty");
+
         self.objects
             .iter()
             .filter_map(|obj| obj.hit(ray, inter))
@@ -117,5 +138,14 @@ impl Hittable for Scene {
                 f64::partial_cmp(&closest.time, &next.time) //
                     .unwrap_or(Ordering::Equal)
             })
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct Empty {}
+
+impl Hittable for Empty {
+    fn hit(&self, _r: &Ray, _inter: &Interval) -> Option<HitRecord> {
+        None
     }
 }

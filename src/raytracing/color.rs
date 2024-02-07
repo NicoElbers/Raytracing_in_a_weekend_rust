@@ -5,7 +5,7 @@ use std::{
     ops::{Add, Div, Mul},
 };
 
-use crate::space::vec3::Vec3;
+use crate::{space::vec3::Vec3, util::random::XorShift};
 
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Color {
@@ -57,10 +57,10 @@ impl Mul<Color> for f64 {
     }
 }
 
-impl Mul<Color> for Color {
-    type Output = Color;
+impl Mul<Self> for Color {
+    type Output = Self;
 
-    fn mul(self, rhs: Color) -> Self::Output {
+    fn mul(self, rhs: Self) -> Self::Output {
         Self {
             r: self.r * rhs.r,
             g: self.g * rhs.g,
@@ -154,6 +154,73 @@ impl Color {
             colors.b() as u64
         )?;
 
+        // println!("Writing color {colors:?}");
+
+        Ok(())
+    }
+
+    pub fn write_colors(colors: &[Self], writer: &mut BufWriter<&File>) -> std::io::Result<()> {
+        let str_len = colors.len() * 6;
+
+
+        #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+        let mut bytes = colors
+            .iter()
+            .map(|color| color.gamma_correct())
+            .flat_map(|color| vec![color.r(), color.g(), color.b()])
+            .map(|val| val * 255.)
+            .map(|color_value| color_value as u64)
+            .map(|val| val.to_string())
+            .fold(String::with_capacity(str_len), |acc, val| acc + &val + " ");
+
+        if bytes.pop().is_some() {
+            bytes.push('\n');
+        }
+
+        let bytes = bytes.as_bytes();
+
+        writer.write_all(bytes)?;
+        writer.flush()?;
+
+        Ok(())
+    }
+
+    pub fn wire_full_file(image: &mut Vec<Vec<Self>>, writer: &mut BufWriter<&File>) -> std::io::Result<()> {
+        let height = image.len();
+        let width = image[0].len();
+        
+        // Get image string
+        // Prelude string
+        let prelude_string = format!("P3\n{width} {height}\n255\n");
+
+        // 3 bytes for the digits, ond byte for the space/ newline
+        let color_bytes = height * width * 4;
+
+        let mut image_string = String::with_capacity(color_bytes + prelude_string.as_bytes().len());
+        image_string.push_str(&prelude_string);
+
+        for line in image{
+            // Turn line into string of color values
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let mut line_string = line.iter()
+                .map(|color| color.gamma_correct())
+                .flat_map(|color| vec![color.r(), color.g(), color.b()])
+                .map(|val| val * 255.)
+                .map(|val| val as u64)
+                .map(|val| val.to_string())
+                .fold(String::with_capacity(line.len() * 4), |str, el| str + &el + " ");
+
+            // Cap the line off with a newline
+            if line_string.pop().is_some(){
+                line_string.push('\n');
+            }
+
+            image_string.push_str(&line_string);
+        }
+
+        // Write whole image
+        writer.write_all(image_string.as_bytes())?;
+
         Ok(())
     }
 
@@ -162,6 +229,23 @@ impl Color {
             r: self.r().powf(1. / 2.2),
             g: self.g().powf(1. / 2.2),
             b: self.b().powf(1. / 2.2),
+        }
+    }
+
+    pub fn random(rand: &mut XorShift) -> Self {
+        Self {
+            r: rand.next_01(),
+            g: rand.next_01(),
+            b: rand.next_01(),
+        }
+    }
+
+    #[allow(clippy::unused_self)]
+    pub const fn set_red(self) -> Self {
+        Self {
+            r: 1.,
+            g: 0.,
+            b: 0.,
         }
     }
 }

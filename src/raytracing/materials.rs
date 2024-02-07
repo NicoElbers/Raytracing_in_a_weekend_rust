@@ -4,7 +4,7 @@ use crate::{space::vec3::Vec3, util::random::XorShift};
 
 use super::{color::Color, hittable::HitRecord, ray::Ray};
 
-pub trait Material: Debug {
+pub trait Material: Debug + Sync + Send {
     fn scatter(&self, ray: &Ray, record: &HitRecord, rand: &mut XorShift) -> Option<(Ray, Color)>;
 }
 
@@ -20,7 +20,7 @@ impl Lambertian {
 }
 
 impl Material for Lambertian {
-    fn scatter(&self, ray: &Ray, record: &HitRecord, rand: &mut XorShift) -> Option<(Ray, Color)> {
+    fn scatter(&self, _ray: &Ray, record: &HitRecord, rand: &mut XorShift) -> Option<(Ray, Color)> {
         let scatter_dir = record.normal() + Vec3::random_unit_vec(rand);
 
         let scatter_dir = if scatter_dir.near_zero() {

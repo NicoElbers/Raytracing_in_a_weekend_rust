@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::raytracing::hittable::HitRecord;
 use crate::raytracing::hittable::Hittable;
@@ -12,12 +12,12 @@ use crate::util::interval::Interval;
 pub struct Sphere {
     center: Point3,
     radius: f64,
-    mat: Rc<dyn Material>,
+    mat: Arc<dyn Material>,
 }
 
 impl Sphere {
     #[must_use]
-    pub const fn new(center: Point3, radius: f64, mat: Rc<dyn Material>) -> Self {
+    pub const fn new(center: Point3, radius: f64, mat: Arc<dyn Material>) -> Self {
         Self {
             center,
             radius,
@@ -26,9 +26,9 @@ impl Sphere {
     }
 
     #[must_use]
-    pub fn new_world_obj(x: f64, y: f64, z: f64, radius: f64, mat: Rc<dyn Material>) -> Rc<Self> {
+    pub fn new_world_obj(x: f64, y: f64, z: f64, radius: f64, mat: Arc<dyn Material>) -> Arc<Self> {
         let center = Point3::new(x, y, z);
-        Rc::new(Self {
+        Arc::new(Self {
             center,
             radius,
             mat,

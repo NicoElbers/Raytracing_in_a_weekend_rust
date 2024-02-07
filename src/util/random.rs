@@ -1,5 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
+#[derive(Clone)]
 pub struct XorShift {
     state: u128,
 }
@@ -40,6 +41,8 @@ impl XorShift {
         let next = self.next_int();
         let next_bounded = next % u128::from(u32::MAX);
 
+
+
         let next_u32 = u32::try_from(next_bounded) //
             .expect("The u32 was bigger than u32, wtf");
 
@@ -48,5 +51,22 @@ impl XorShift {
         debug_assert!(output <= 1.);
 
         output
+    }
+
+    pub fn next_bound(&mut self, min: f64, max: f64) -> f64 {
+        let diff = max - min;
+        let next = self.next_01();
+
+        min + diff * next
+    }
+
+    pub fn copy_reset(&mut self) -> Self {
+        let self_state = self.state;
+        let mut reset_state = self_state ^ self.next_int();
+        reset_state ^= reset_state >> 13;
+        reset_state ^= reset_state << 5;
+        reset_state ^= reset_state >> 11;
+
+        Self { state: reset_state }
     }
 }
