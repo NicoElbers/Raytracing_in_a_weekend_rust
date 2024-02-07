@@ -7,3 +7,5 @@ img.ppm
 
 target
 random.ppm
+tmp
+full_multithread.ppm
