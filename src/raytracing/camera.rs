@@ -286,6 +286,7 @@ impl Camera {
             image_vec[pr.y_loc][pr.x_loc] = pr.color;
         }
 
+        println!("After pixel gathering");
 
         // Get file
         let file = File::create("img.ppm")?;
