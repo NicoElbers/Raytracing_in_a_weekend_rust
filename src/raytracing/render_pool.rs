@@ -79,17 +79,23 @@ impl ThreadPool {
             let job_reciever = job_reciever.clone();
             let shared_state = shared_state.clone();
 
-            thread::spawn(move || {
-                while let Ok(job) = job_reciever.lock().expect("Cannot get job reciever").recv() {
-                    shared_state
-                        .lock()
-                        .expect("Couldn't get shared state")
-                        .job_starting();
-                    job();
-                    shared_state
-                        .lock()
-                        .expect("Couldn't get shared state")
-                        .job_finished();
+            thread::spawn(move || loop {
+                let job = job_reciever.lock().expect("Cannot get reciever").recv();
+                match job {
+                    Ok(job) => {
+                        shared_state
+                            .lock()
+                            .expect("Couldn't get shared state")
+                            .job_starting();
+
+                        job();
+
+                        shared_state
+                            .lock()
+                            .expect("Couldn't get shared state")
+                            .job_finished();
+                    }
+                    Err(_) => break,
                 }
             });
         }
