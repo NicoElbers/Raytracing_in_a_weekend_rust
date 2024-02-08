@@ -94,6 +94,15 @@ impl Color {
     }
 
     #[must_use]
+    pub const fn black() -> Self {
+        Self {
+            r: 0.,
+            g: 0.,
+            b: 0.,
+        }
+    }
+
+    #[must_use]
     pub const fn r(&self) -> f64 {
         self.r
     }
@@ -162,7 +171,6 @@ impl Color {
     pub fn write_colors(colors: &[Self], writer: &mut BufWriter<&File>) -> std::io::Result<()> {
         let str_len = colors.len() * 6;
 
-
         #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
         let mut bytes = colors
             .iter()
@@ -185,10 +193,13 @@ impl Color {
         Ok(())
     }
 
-    pub fn wire_full_file(image: &mut Vec<Vec<Self>>, writer: &mut BufWriter<&File>) -> std::io::Result<()> {
+    pub fn wire_full_file(
+        image: &mut Vec<Vec<Self>>,
+        writer: &mut BufWriter<&File>,
+    ) -> std::io::Result<()> {
         let height = image.len();
         let width = image[0].len();
-        
+
         // Get image string
         // Prelude string
         let prelude_string = format!("P3\n{width} {height}\n255\n");
@@ -199,19 +210,22 @@ impl Color {
         let mut image_string = String::with_capacity(color_bytes + prelude_string.as_bytes().len());
         image_string.push_str(&prelude_string);
 
-        for line in image{
+        for line in image {
             // Turn line into string of color values
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-            let mut line_string = line.iter()
+            let mut line_string = line
+                .iter()
                 .map(|color| color.gamma_correct())
                 .flat_map(|color| vec![color.r(), color.g(), color.b()])
                 .map(|val| val * 255.)
                 .map(|val| val as u64)
                 .map(|val| val.to_string())
-                .fold(String::with_capacity(line.len() * 4), |str, el| str + &el + " ");
+                .fold(String::with_capacity(line.len() * 4), |str, el| {
+                    str + &el + " "
+                });
 
             // Cap the line off with a newline
-            if line_string.pop().is_some(){
+            if line_string.pop().is_some() {
                 line_string.push('\n');
             }
 

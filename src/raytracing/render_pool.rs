@@ -1,19 +1,11 @@
-//
-// TODO: Currently when renderline is called once it seems to render, multiple lines
-// Fix that shit, or just rewrite. This is too complex by now....
 use std::{
-    error::Error,
     num::NonZeroUsize,
     sync::{
-        mpsc::{self, channel, Receiver, Sender},
+        mpsc::{self, channel, Sender},
         Arc, Mutex,
     },
-    thread::{self, available_parallelism, ThreadId},
+    thread::{self, available_parallelism},
 };
-
-use crate::{space::vec3::Vec3, util::random::XorShift};
-
-use super::{camera::Camera, color::Color, hittable::SceneObject};
 
 type ThreadPoolFunction = Box<dyn FnOnce() + Send>;
 
@@ -23,12 +15,8 @@ struct InternalState {
 }
 
 impl InternalState {
-    fn new(
-        job_transmitter: Sender<ThreadPoolFunction>,
-    ) -> Self {
-        Self {
-            job_transmitter,
-        }
+    fn new(job_transmitter: Sender<ThreadPoolFunction>) -> Self {
+        Self { job_transmitter }
     }
 }
 
@@ -63,13 +51,14 @@ impl SharedState {
     }
 }
 
-pub struct RenderPool {
+#[allow(dead_code)]
+pub struct ThreadPool {
     max_threads: usize,
     internal_state: InternalState,
     shared_state: Arc<Mutex<SharedState>>,
 }
 
-impl Default for RenderPool {
+impl Default for ThreadPool {
     fn default() -> Self {
         let max_threads = available_parallelism().expect("Cannot find available threads");
 
@@ -77,48 +66,31 @@ impl Default for RenderPool {
     }
 }
 
-impl RenderPool {
+impl ThreadPool {
     pub fn new(thread_amount: NonZeroUsize) -> Self {
-        // It's easier to work with usize
         let thread_amount = thread_amount.get();
-
-        // Initialize communication channels
         let (tx_jobs, rx_jobs) = channel::<ThreadPoolFunction>();
-
-        // Create arc mutex for recievers
         let job_reciever = Arc::new(Mutex::new(rx_jobs));
-
-        // Initialize internal state
         let internal_state = InternalState::new(tx_jobs);
         let shared_state = SharedState::new();
 
         // Create the threads
         for _ in 0..thread_amount {
-            let reciever = job_reciever.clone();
+            let job_reciever = job_reciever.clone();
             let shared_state = shared_state.clone();
 
-            thread::spawn(move || loop {
-                let job = reciever
-                    .lock()
-                    .expect("Cannot get reciever")
-                    .recv();
-                match job {
-                    Ok(job) =>{
-                        shared_state
-                            .lock()
-                            .expect("Couldn't get shared state")
-                            .job_starting();
-
-                        job();
-
-                        shared_state
-                            .lock()
-                            .expect("Couldn't get shared state")
-                            .job_finished();
-                    }
-                    Err(_) => break,
+            thread::spawn(move || {
+                while let Ok(job) = job_reciever.lock().expect("Cannot get job reciever").recv() {
+                    shared_state
+                        .lock()
+                        .expect("Couldn't get shared state")
+                        .job_starting();
+                    job();
+                    shared_state
+                        .lock()
+                        .expect("Couldn't get shared state")
+                        .job_finished();
                 }
-
             });
         }
 
@@ -159,6 +131,7 @@ impl RenderPool {
         self.jobs_running() == 0 && self.jobs_queued() == 0
     }
 
+    #[allow(dead_code)]
     pub const fn threads(&self) -> usize {
         self.max_threads
     }

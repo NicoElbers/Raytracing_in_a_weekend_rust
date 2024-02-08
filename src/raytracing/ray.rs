@@ -39,15 +39,4 @@ impl Ray {
     pub const fn dir(&self) -> Vec3 {
         self.dir
     }
-
-    #[must_use]
-    pub fn offset_dir(self, offset: &Vec3) -> Self {
-        let dir = self.dir + *offset;
-        let dir = dir.unit();
-
-        Self {
-            orig: self.orig,
-            dir,
-        }
-    }
 }

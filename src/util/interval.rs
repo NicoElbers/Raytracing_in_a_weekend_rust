@@ -10,6 +10,9 @@ impl Default for Interval {
     }
 }
 
+// TODO: think if I can remove this with a little bit of googling and seeing how
+// I can pass a rangebound insead of this
+#[allow(dead_code)]
 impl Interval {
     #[must_use]
     pub const fn new(min: f64, max: f64) -> Self {

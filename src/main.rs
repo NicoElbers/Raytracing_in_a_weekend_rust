@@ -22,7 +22,7 @@ use util::random::XorShift;
 const ASPECT_RATIO: f64 = 16.0 / 9.0;
 
 // Image size
-const IMAGE_HEIGHT: usize = 100;
+const IMAGE_HEIGHT: usize = 1440;
 #[allow(
     clippy::cast_possible_truncation,
     clippy::cast_sign_loss,
@@ -35,8 +35,8 @@ const FOCAL_LENGTH: f64 = 1.0;
 
 const FOV: f64 = 20.;
 
-const SAMPLE_SQRT: usize = 5;
-const MAX_DEPTH: usize = 5;
+const SAMPLE_SQRT: usize = 45;
+const MAX_DEPTH: usize = 50;
 
 const LOOK_FROM: Point3 = Point3::new(13., 2., 3.);
 const LOOK_TO: Point3 = Point3::new(0., 0., 0.);
@@ -47,8 +47,8 @@ const DEFOCUS_ANGLE: f64 = 0.6;
 const FOCUS_DIST: f64 = 10.0;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    simple()?;
-    // complex()?;
+    // simple()?;
+    complex()?;
     // super_simple()?;
     // threads()?;
 
@@ -114,10 +114,10 @@ fn complex() -> Result<(), Box<dyn Error>> {
     );
 
     let world = world.build() as Arc<dyn Hittable>;
-    cam.render(&world, SAMPLE_SQRT)?;
+    // cam.render(&world, SAMPLE_SQRT)?;
 
-    // let cam = Arc::new(cam);
-    // Camera::threaded_render(&cam, &world, SAMPLE_SQRT)?;
+    let cam = Arc::new(cam);
+    Camera::threaded_render(&cam, &world, SAMPLE_SQRT)?;
 
     Ok(())
 }
