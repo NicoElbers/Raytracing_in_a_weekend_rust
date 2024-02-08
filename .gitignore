@@ -9,3 +9,4 @@ target
 random.ppm
 tmp
 full_multithread.ppm
+threaded_2k.ppm
