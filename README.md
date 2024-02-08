@@ -8,7 +8,7 @@
   - [Plans for the future](#plans-for-the-future)
 <!--toc:end-->
 
-I did [Ray tracing in one weekend](https://raytracing.github.io/books/RayTracingInOneWeekend.html) in Rust without any external dependencies. I've made some changes to the original behavior where I felt like it, but the output still results in a ray traced image. 
+I did [Ray tracing in one weekend](https://raytracing.github.io/books/RayTracingInOneWeekend.html) in Rust **without any external dependencies**. I've made some changes to the original behavior where I felt like it, but the output still results in a ray traced image. 
 The resulting image will always be exported to a file called "img.ppm", exporting only happens at the *end* of rendering, all in one* go.
 
 ## Additional features
