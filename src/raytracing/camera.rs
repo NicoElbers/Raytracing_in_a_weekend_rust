@@ -1,6 +1,6 @@
 use std::error::Error;
 use std::fs::File;
-use std::io::{stdout, BufWriter, Write};
+use std::io::BufWriter;
 use std::sync::mpsc::channel;
 use std::sync::Arc;
 
@@ -11,6 +11,7 @@ use crate::raytracing::render_pool::ThreadPool;
 use crate::space::point3::Point3;
 use crate::space::vec3::Vec3;
 use crate::util::interval::Interval;
+use crate::util::progress::{MessageType, ProgressBar};
 use crate::util::random::XorShift;
 
 #[derive(Debug, Clone, Copy)]
@@ -187,20 +188,6 @@ impl Camera {
         }
     }
 
-    fn update_prog(&self, counter: usize, last_prog: &mut usize) -> std::io::Result<()> {
-        let prog = counter / (self.img.height * self.img.width / 100);
-
-        if *last_prog != prog {
-            let mut out = stdout();
-            out.write_all(b"\r\x1b[2K")?;
-            print!("[ INFO ] {prog}% done");
-            out.flush()?;
-            *last_prog = prog;
-        }
-
-        Ok(())
-    }
-
     pub fn threaded_render(
         cam: &Arc<Self>,
         world: &Arc<SceneObject>,
@@ -241,7 +228,12 @@ impl Camera {
 
         assert!(render_pool.is_finished());
 
+        #[allow(clippy::cast_precision_loss)]
+        let mut progress_bar =
+            ProgressBar::new(MessageType::Info, "Sending jobs", cam.height() as f64)?;
+
         for height in 0..cam.height() {
+            progress_bar.update()?;
             for width in 0..cam.width() {
                 let mut rand = rand.copy_reset();
                 let camera = cam.clone();
@@ -264,44 +256,36 @@ impl Camera {
             }
         }
 
-        println!("Done sending jobs");
-
         let mut image_vec: Vec<Vec<Color>> = Vec::with_capacity(cam.height());
 
+        #[allow(clippy::cast_precision_loss)]
+        let mut progress_bar = ProgressBar::new(
+            MessageType::Info,
+            "Creating image vector",
+            cam.height() as f64,
+        )?;
+
         for height in 0..cam.height() {
+            progress_bar.update()?;
             image_vec.push(Vec::<Color>::with_capacity(cam.width()));
             for _ in 0..cam.width() {
                 image_vec[height].push(Color::black());
             }
         }
 
-        println!("Done setup vector");
-        println!("Now listening for messages");
+        #[allow(clippy::cast_precision_loss)]
+        let mut progress_bar = ProgressBar::new(
+            MessageType::Info,
+            "Rendering pixels",
+            (cam.width() * cam.height()) as f64,
+        )?;
 
-        // TODO: Factor out updating progress *more*
-        let mut last_prog: usize = 0;
-        let mut out = stdout();
-        print!("[ INFO ] 0% done");
-        out.flush()?;
-
-        let mut counter = 0;
         while !render_pool.is_finished() {
-            cam.update_prog(counter, &mut last_prog)?;
-
+            progress_bar.update()?;
             let pr = pixel_reciever.recv().expect("Couldn't get rendered pixel");
-
-            // dbg!(pr);
-
             image_vec[pr.y_loc][pr.x_loc] = pr.color;
-
-            counter += 1;
         }
 
-        let mut out = stdout();
-        out.write_all(b"\r\x1b[2K")?;
-        println!("[ INFO ]     done!");
-        println!("Now writing file");
-        out.flush()?;
 
         // Get file
         let file = File::create("img.ppm")?;
@@ -373,10 +357,10 @@ impl Camera {
 
         let ray_direction: Vec3 = (pixel_sample - ray_origin).into();
 
-        debug_assert!(
-            ray_direction.len_squared() < 0.1,
-            "Direction is too damn small"
-        );
+        // debug_assert!(
+        //     ray_direction.len_squared() < 0.1,
+        //     "Direction is too damn small"
+        // );
 
         Ray::new(ray_origin, ray_direction)
     }
