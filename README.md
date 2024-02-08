@@ -23,8 +23,10 @@ I plan to still add/ improve the following:
 - The progress behavior
     - It currently doesn't work for single threaded rendering, and I can make it cooler with an ETA for when the render is finished.
 - Preview application
-    - I plan to create a winnit application that will show the image as pixels are coming in. This'll probably tank performance, but idc, it's cool
+    - I plan to create a winnit application that will show the image as pixels are coming in. This'll probably tank performance, but idc, it's cool.
 - GPU rendering
-    - Eventually I plan to render my pixels with WebGPU which should be **massively** faster. But I've never worked with the gpu so we'll see
+    - Eventually I plan to render my pixels with WebGPU which should be **massively** faster. But I've never worked with the gpu so we'll see.
+- PNG
+    - I'm planning to look into PNGs to see if I can directly render to that instead of ppm. ppm is easy, but god damn it also takes up some space..
 - Ray tracing beyond
-    - This was pretty damn fun to do, so maybe somewhere down the line I'll do Ray tracing in a week and or Ray tracing the rest of your life. But I think I'm more interested in the GPU, so we'll see where things go
+    - This was pretty damn fun to do, so maybe somewhere down the line I'll do Ray tracing in a week and or Ray tracing the rest of your life. But I think I'm more interested in the GPU, so we'll see where things go.
