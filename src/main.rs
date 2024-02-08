@@ -22,7 +22,7 @@ use util::random::XorShift;
 const ASPECT_RATIO: f64 = 16.0 / 9.0;
 
 // Image size
-const IMAGE_HEIGHT: usize = 1440;
+const IMAGE_HEIGHT: usize = 400;
 #[allow(
     clippy::cast_possible_truncation,
     clippy::cast_sign_loss,
@@ -35,7 +35,7 @@ const FOCAL_LENGTH: f64 = 1.0;
 
 const FOV: f64 = 20.;
 
-const SAMPLE_SQRT: usize = 45;
+const SAMPLE_SQRT: usize = 5;
 const MAX_DEPTH: usize = 50;
 
 const LOOK_FROM: Point3 = Point3::new(13., 2., 3.);
