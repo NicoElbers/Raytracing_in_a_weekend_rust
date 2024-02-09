@@ -1,10 +1,11 @@
 use std::{
     io::{self, stdout, Write},
-    time::{Duration, Instant, SystemTime},
+    time::{Duration, Instant},
 };
 
 use terminal_size::{terminal_size, Width};
 
+#[allow(dead_code)]
 pub enum MessageType {
     Info,
     Error,

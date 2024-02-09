@@ -69,9 +69,11 @@ impl Default for ThreadPool {
 impl ThreadPool {
     pub fn new(thread_amount: NonZeroUsize) -> Self {
         let thread_amount = thread_amount.get();
+
         let (tx_jobs, rx_jobs) = channel::<ThreadPoolFunction>();
         let job_reciever = Arc::new(Mutex::new(rx_jobs));
         let internal_state = InternalState::new(tx_jobs);
+
         let shared_state = SharedState::new();
 
         // Create the threads
@@ -80,6 +82,10 @@ impl ThreadPool {
             let shared_state = shared_state.clone();
 
             thread::spawn(move || loop {
+                // Should exit gracefully if the job_reciever is no longer available
+                // emphasis on should....
+                // TODO: Handle the case when the thread panics
+                // TODO: Actually test this maybe
                 let job = job_reciever.lock().expect("Cannot get reciever").recv();
                 match job {
                     Ok(job) => {
@@ -111,11 +117,14 @@ impl ThreadPool {
         &mut self,
         job: ThreadPoolFunction,
     ) -> Result<(), mpsc::SendError<ThreadPoolFunction>> {
-        self.internal_state.job_transmitter.send(job)?;
+        // NOTE: It is essential that the shared state is updated FIRST otherwise
+        // we have a race condidition that the job is transmitted and read before
+        // the shared state is updated, leading to a negative amount of jobs queued
         self.shared_state
             .lock()
             .expect("Couldn't add job to shared state")
             .job_queued();
+        self.internal_state.job_transmitter.send(job)?;
         Ok(())
     }
 

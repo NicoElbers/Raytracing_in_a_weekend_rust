@@ -4,6 +4,9 @@ use std::io::BufWriter;
 use std::sync::mpsc::channel;
 use std::sync::Arc;
 
+use winit::event_loop::EventLoopProxy;
+
+use crate::application::Events;
 use crate::raytracing::color::Color;
 use crate::raytracing::hittable::SceneObject;
 use crate::raytracing::ray::Ray;
@@ -13,6 +16,13 @@ use crate::space::vec3::Vec3;
 use crate::util::interval::Interval;
 use crate::util::progress::{MessageType, ProgressBar};
 use crate::util::random::XorShift;
+
+#[derive(Debug, Clone, Copy)]
+pub struct PixelRender {
+    pub color: Color,
+    pub x_loc: usize,
+    pub y_loc: usize,
+}
 
 #[derive(Debug, Clone, Copy)]
 struct ImgData {
@@ -79,7 +89,7 @@ impl BasisVecs {
 
 // TODO: Refactor camera to use a builder, this is too many arguments :(
 // TODO: Implement some sensible defaults for camera, again this is too much shit
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 /// [Camera] stores information for a camera in a scene. It sets up a location
 /// and some screen information (aspect ratio, height, focal length, etc).
 #[allow(dead_code)]
@@ -100,6 +110,8 @@ pub struct Camera {
 
     defocus_disk_u: Vec3,
     defocus_disk_v: Vec3,
+
+    event_transmitter: EventLoopProxy<Events>,
 }
 
 impl Camera {
@@ -116,6 +128,7 @@ impl Camera {
         vup: Vec3,
         defocus_angle: f64,
         focus_dist: f64,
+        event_transmitter: EventLoopProxy<Events>,
     ) -> Self {
         // Viewport
         let theta = f64::to_radians(fov);
@@ -185,6 +198,7 @@ impl Camera {
             focus_dist,
             defocus_disk_u,
             defocus_disk_v,
+            event_transmitter,
         }
     }
 
@@ -193,13 +207,6 @@ impl Camera {
         world: &Arc<SceneObject>,
         samples_sqrt: usize,
     ) -> Result<(), Box<dyn Error>> {
-        #[derive(Debug, Clone, Copy)]
-        struct PixelRender {
-            pub color: Color,
-            pub x_loc: usize,
-            pub y_loc: usize,
-        }
-
         // Log image to be rendered
         println!(
             r#"
@@ -266,11 +273,11 @@ impl Camera {
         )?;
 
         for height in 0..cam.height() {
-            progress_bar.update()?;
             image_vec.push(Vec::<Color>::with_capacity(cam.width()));
             for _ in 0..cam.width() {
                 image_vec[height].push(Color::black());
             }
+            progress_bar.update()?;
         }
 
         #[allow(clippy::cast_precision_loss)]
@@ -281,9 +288,13 @@ impl Camera {
         )?;
 
         while !render_pool.is_finished() {
-            progress_bar.update()?;
             let pr = pixel_reciever.recv().expect("Couldn't get rendered pixel");
             image_vec[pr.y_loc][pr.x_loc] = pr.color;
+            progress_bar.update()?;
+            
+
+            // TODO: make sure that exiting the program gracefully exits here
+            cam.event_transmitter.send_event(Events::RenderPixel(pr))?;
         }
 
         println!("After pixel gathering");
