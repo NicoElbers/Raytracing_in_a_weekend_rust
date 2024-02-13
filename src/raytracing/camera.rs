@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::fmt::Display;
 use std::fs::File;
 use std::io::BufWriter;
 use std::sync::mpsc::channel;
@@ -10,12 +11,26 @@ use crate::application::Events;
 use crate::raytracing::color::Color;
 use crate::raytracing::hittable::SceneObject;
 use crate::raytracing::ray::Ray;
-use crate::raytracing::render_pool::ThreadPool;
 use crate::space::point3::Point3;
 use crate::space::vec3::Vec3;
 use crate::util::interval::Interval;
 use crate::util::progress::{MessageType, ProgressBar};
 use crate::util::random::XorShift;
+use crate::util::thread_pool::ThreadPool;
+
+#[derive(Debug)]
+struct UnableToSendPixelError {}
+
+impl Display for UnableToSendPixelError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Render was unable to send pixel, and decided to give up on life"
+        )
+    }
+}
+
+impl Error for UnableToSendPixelError {}
 
 #[derive(Debug, Clone, Copy)]
 pub struct PixelRender {
@@ -89,10 +104,10 @@ impl BasisVecs {
 
 // TODO: Refactor camera to use a builder, this is too many arguments :(
 // TODO: Implement some sensible defaults for camera, again this is too much shit
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 /// [Camera] stores information for a camera in a scene. It sets up a location
 /// and some screen information (aspect ratio, height, focal length, etc).
-#[allow(dead_code)]
 pub struct Camera {
     img: ImgData,
     cam: CamData,
@@ -226,7 +241,7 @@ impl Camera {
             Self::offset_lattice(&cam.pixel_delta_v, &cam.pixel_delta_u, samples_sqrt);
         let offsets: Arc<[Vec3]> = offsets.as_slice().into();
 
-        let mut render_pool = ThreadPool::default();
+        let mut render_pool = ThreadPool::default()?;
         let mut rand = XorShift::default();
 
         let (pixel_transmitter, pixel_reciever) = channel::<PixelRender>();
@@ -248,18 +263,20 @@ impl Camera {
                 let offsets = offsets.clone();
                 let event_transmitter = pixel_transmitter.clone();
 
-                render_pool.send_job(Box::new(move || {
+                render_pool.send_job(move || {
                     let color =
                         camera.ray_colors_lattice(width, height, &world, &offsets, &mut rand);
 
-                    event_transmitter
-                        .send(PixelRender {
-                            color,
-                            x_loc: width,
-                            y_loc: height,
-                        })
-                        .expect("Couldn't send pixel back");
-                }))?;
+                    // HACK: If no jobs transmit, this will not work properly
+                    // however I don't want a thousand errors so this is the
+                    // workaround
+                    let _ = event_transmitter.send(PixelRender {
+                        color,
+                        x_loc: width,
+                        y_loc: height,
+                    });
+                    // .expect("Couldn't send pixel back");
+                })?;
             }
         }
 
@@ -287,14 +304,18 @@ impl Camera {
             (cam.width() * cam.height()) as f64,
         )?;
 
-        while !render_pool.is_finished() {
+        while !render_pool.is_finished() && !render_pool.has_paniced() {
             let pr = pixel_reciever.recv().expect("Couldn't get rendered pixel");
             image_vec[pr.y_loc][pr.x_loc] = pr.color;
             progress_bar.update()?;
-            
 
-            // TODO: make sure that exiting the program gracefully exits here
-            cam.event_transmitter.send_event(Events::RenderPixel(pr))?;
+            if cam
+                .event_transmitter
+                .send_event(Events::RenderPixel(pr))
+                .is_err()
+            {
+                return Err(Box::new(UnableToSendPixelError {}));
+            }
         }
 
         println!("After pixel gathering");

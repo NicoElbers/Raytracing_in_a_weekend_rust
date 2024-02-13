@@ -3,8 +3,8 @@ pub mod color;
 pub mod hittable;
 pub mod materials;
 pub mod ray;
-pub mod render_pool;
 pub mod shapes;
+// pub mod thread_pool;
 
 use std::{error::Error, sync::Arc};
 
@@ -38,7 +38,7 @@ const FOCAL_LENGTH: f64 = 1.0;
 
 const FOV: f64 = 20.;
 
-const SAMPLE_SQRT: usize = 10;
+const SAMPLE_SQRT: usize = 20;
 const MAX_DEPTH: usize = 50;
 
 const LOOK_FROM: Point3 = Point3::new(13., 2., 3.);

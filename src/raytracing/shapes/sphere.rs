@@ -1,3 +1,5 @@
+use std::panic::RefUnwindSafe;
+use std::panic::UnwindSafe;
 use std::sync::Arc;
 
 use crate::raytracing::hittable::HitRecord;
@@ -48,8 +50,7 @@ impl Hittable for Sphere {
         let half_b = Vec3::dot(oc, r.dir());
         let c = oc.len_squared() - self.radius * self.radius;
 
-        #[allow(clippy::suspicious_operation_groupings)]
-        let d = (half_b * half_b) - (a * c);
+        let d = half_b.powi(2) - (a * c);
 
         // If discriminant < 0, then no hit
         if d < 0.0 {

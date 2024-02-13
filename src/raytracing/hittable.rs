@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::fmt::Debug;
+use std::panic::RefUnwindSafe;
 use std::sync::Arc;
 
 use crate::raytracing::materials::Material;
@@ -8,7 +9,7 @@ use crate::space::point3::Point3;
 use crate::space::vec3::Vec3;
 use crate::util::interval::Interval;
 
-pub trait Hittable: Debug + Send + Sync {
+pub trait Hittable: Debug + Send + Sync + RefUnwindSafe {
     fn hit(&self, r: &Ray, inter: &Interval) -> Option<HitRecord>;
 }
 

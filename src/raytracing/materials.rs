@@ -1,10 +1,10 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, panic::RefUnwindSafe};
 
 use crate::{space::vec3::Vec3, util::random::XorShift};
 
 use super::{color::Color, hittable::HitRecord, ray::Ray};
 
-pub trait Material: Debug + Sync + Send {
+pub trait Material: Debug + Sync + Send + RefUnwindSafe {
     fn scatter(&self, ray: &Ray, record: &HitRecord, rand: &mut XorShift) -> Option<(Ray, Color)>;
 }
 

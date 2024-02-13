@@ -18,8 +18,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     // raytracing::super_simple()?;
     // raytracing::threads()?;
 
-    let width = 2560;
-    let height = 1440;
+    let width = 1000;
+    let height = 1000;
 
     let (mut application, event_loop) = Application::create(width, height)?;
 
@@ -28,11 +28,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     thread::scope(|scope| {
         scope.spawn(move || {
             if let Err(err) = raytracing::complex(width, height, event_loop_proxy) {
+                eprintln!();
                 eprintln!("Render thread errored with {err}");
             }
         });
 
         if let Err(err) = application.run(event_loop) {
+            eprintln!();
             eprintln!("Application errored with error {err}");
         }
     });

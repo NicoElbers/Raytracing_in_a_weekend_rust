@@ -39,10 +39,8 @@ impl XorShift {
 
     pub fn next_01(&mut self) -> f64 {
         let next = self.next_int();
+
         let next_bounded = next % u128::from(u32::MAX);
-
-
-
         let next_u32 = u32::try_from(next_bounded) //
             .expect("The u32 was bigger than u32, wtf");
 
