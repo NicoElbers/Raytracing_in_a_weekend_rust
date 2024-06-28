@@ -2,9 +2,9 @@ use std::error::Error;
 
 use pixels::{Pixels, SurfaceTexture};
 use winit::{
-    dpi::LogicalSize,
+    dpi::PhysicalSize,
     event::{Event, WindowEvent},
-    event_loop::{ControlFlow, EventLoop, EventLoopBuilder, EventLoopWindowTarget},
+    event_loop::{ControlFlow, EventLoop, EventLoopBuilder, EventLoopProxy, EventLoopWindowTarget},
     platform::x11::{WindowBuilderExtX11, XWindowType},
     window::{Window, WindowBuilder},
 };
@@ -17,6 +17,7 @@ pub enum Events {
 }
 
 pub struct Application {
+    event_loop: EventLoop<Events>,
     pixels: Pixels,
     window: Window,
     width: usize,
@@ -24,31 +25,33 @@ pub struct Application {
 }
 
 impl Application {
-    pub fn new(width: usize, height: usize, pixels: Pixels, window: Window) -> Self {
+    pub fn new(
+        width: usize,
+        height: usize,
+        pixels: Pixels,
+        window: Window,
+        event_loop: EventLoop<Events>,
+    ) -> Self {
         Self {
             pixels,
             window,
             width,
             height,
+            event_loop,
         }
     }
 
-    pub fn create(
-        width: usize,
-        height: usize,
-    ) -> Result<(Self, EventLoop<Events>), Box<dyn Error>> {
+    pub fn create(width: usize, height: usize) -> Result<Self, Box<dyn Error>> {
         let event_loop = EventLoopBuilder::<Events>::with_user_event().build()?;
 
         let application_width = u32::try_from(width).expect("fuck you");
         let application_height = u32::try_from(height).expect("fuck you");
 
         let window = {
-            let size = LogicalSize::new(application_width, application_height);
+            let size = PhysicalSize::new(application_width, application_height);
             WindowBuilder::new()
                 .with_title("Ray tracer")
                 .with_inner_size(size)
-                .with_min_inner_size(size)
-                .with_max_inner_size(size)
                 .with_x11_window_type(vec![XWindowType::Utility])
                 .build(&event_loop)?
         };
@@ -59,16 +62,16 @@ impl Application {
             Pixels::new(application_width, application_height, surface_texture)?
         };
 
-        Ok((Self::new(width, height, pixels, window), event_loop))
+        Ok(Self::new(width, height, pixels, window, event_loop))
     }
 
-    pub fn run(
-        &mut self,
-        event_loop: EventLoop<Events>,
-    ) -> Result<(), winit::error::EventLoopError> {
-        event_loop.set_control_flow(ControlFlow::Wait);
+    pub fn create_proxy(&self) -> EventLoopProxy<Events> {
+        self.event_loop.create_proxy()
+    }
 
-        // println!("{:?}", self.pixels);
+    pub fn run(mut self) -> Result<(), winit::error::EventLoopError> {
+        let event_loop = self.event_loop;
+        event_loop.set_control_flow(ControlFlow::Wait);
 
         event_loop.run(move |event, target: &EventLoopWindowTarget<Events>| {
             match event {
@@ -101,14 +104,6 @@ impl Application {
                     target.exit();
                 }
                 _ => (),
-                // Event::NewEvents(_) => todo!(),
-                // Event::WindowEvent { window_id, event } => todo!(),
-                // Event::DeviceEvent { device_id, event } => todo!(),
-                // Event::Suspended => todo!(),
-                // Event::Resumed => todo!(),
-                // Event::AboutToWait => todo!(),
-                // Event::LoopExiting => todo!(),
-                // Event::MemoryWarning => unimplemented!(),
             }
         })
     }

@@ -80,10 +80,22 @@ impl<'a> ProgressBar<'a> {
         let minutes = (eta / 60_000) % 60;
         let hours = eta / 3_600_000;
 
-        let eta = format!("{hours:02}:{minutes:02}:{seconds:02}:{milis:03}");
+        let eta_str = format!("{hours:02}:{minutes:02}:{seconds:02}:{milis:03}");
 
         let left_side = format!("{} {} ", self.message_type.get_message(), self.message);
-        let right_side = format!(" {percent}% done | ETA: {eta}");
+
+        let right_side = if eta > 0 {
+            format!(" {percent}% done | ETA: {eta_str}")
+        } else {
+            let time = elapsed.as_millis();
+            let milis = time % 1000;
+            let seconds = (time / 1_000) % 60;
+            let minutes = (time / 60_000) % 60;
+            let hours = time / 3_600_000;
+            let time_str = format!("{hours:02}:{minutes:02}:{seconds:02}:{milis:03}");
+
+            format!(" Took {time_str}")
+        };
 
         let padding_amount = match terminal_size {
             Some((Width(w), _)) => w as usize - left_side.len() - right_side.len(),

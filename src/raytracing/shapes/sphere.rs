@@ -1,5 +1,3 @@
-use std::panic::RefUnwindSafe;
-use std::panic::UnwindSafe;
 use std::sync::Arc;
 
 use crate::raytracing::hittable::HitRecord;

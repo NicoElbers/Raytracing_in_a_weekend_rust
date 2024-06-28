@@ -11,17 +11,6 @@ use std::{
 
 type ThreadPoolFunctionBoxed = Box<dyn FnOnce() + Sync + Send + UnwindSafe>;
 
-#[derive(Debug)]
-struct InternalState {
-    job_transmitter: Sender<ThreadPoolFunctionBoxed>,
-}
-
-impl InternalState {
-    fn new(job_transmitter: Sender<ThreadPoolFunctionBoxed>) -> Self {
-        Self { job_transmitter }
-    }
-}
-
 struct SharedState {
     jobs_queued: usize,
     jobs_running: usize,
@@ -61,24 +50,33 @@ impl SharedState {
 
 #[allow(dead_code)]
 pub struct ThreadPool {
-    max_threads: usize,
-    internal_state: InternalState,
+    thread_amount: usize,
+    job_sender: Sender<ThreadPoolFunctionBoxed>,
     shared_state: Arc<Mutex<SharedState>>,
 }
 
 impl ThreadPool {
+    /// .
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if .
     pub fn default() -> io::Result<Self> {
-        let max_threads = available_parallelism().expect("Cannot find available threads");
+        let max_threads = available_parallelism()?;
 
         Self::new(max_threads)
     }
 
+    /// .
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if .
     pub fn new(thread_amount: NonZeroUsize) -> io::Result<Self> {
         let thread_amount = thread_amount.get();
 
-        let (tx_jobs, rx_jobs) = channel::<ThreadPoolFunctionBoxed>();
-        let job_reciever = Arc::new(Mutex::new(rx_jobs));
-        let internal_state = InternalState::new(tx_jobs);
+        let (job_sender, job_receiver) = channel::<ThreadPoolFunctionBoxed>();
+        let job_reciever = Arc::new(Mutex::new(job_receiver));
 
         let shared_state = SharedState::new();
 
@@ -95,8 +93,8 @@ impl ThreadPool {
         }
 
         Ok(Self {
-            max_threads: thread_amount,
-            internal_state,
+            thread_amount,
+            job_sender,
             shared_state,
         })
     }
@@ -151,7 +149,7 @@ impl ThreadPool {
             .lock()
             .expect("Couldn't add job to shared state")
             .job_queued();
-        self.internal_state.job_transmitter.send(Box::new(job))?;
+        self.job_sender.send(Box::new(job))?;
         Ok(())
     }
 
@@ -186,6 +184,6 @@ impl ThreadPool {
 
     #[allow(dead_code)]
     pub const fn threads(&self) -> usize {
-        self.max_threads
+        self.thread_amount
     }
 }

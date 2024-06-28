@@ -1,9 +1,11 @@
 use std::error::Error;
+
 use std::fmt::Display;
 use std::fs::File;
 use std::io::BufWriter;
 use std::sync::mpsc::channel;
 use std::sync::Arc;
+use std::time::Duration;
 
 use winit::event_loop::EventLoopProxy;
 
@@ -16,7 +18,8 @@ use crate::space::vec3::Vec3;
 use crate::util::interval::Interval;
 use crate::util::progress::{MessageType, ProgressBar};
 use crate::util::random::XorShift;
-use crate::util::thread_pool::ThreadPool;
+
+use easy_threadpool::ThreadPoolBuilder;
 
 #[derive(Debug)]
 struct UnableToSendPixelError {}
@@ -126,7 +129,7 @@ pub struct Camera {
     defocus_disk_u: Vec3,
     defocus_disk_v: Vec3,
 
-    event_transmitter: EventLoopProxy<Events>,
+    event_transmitter: Option<EventLoopProxy<Events>>,
 }
 
 impl Camera {
@@ -143,7 +146,7 @@ impl Camera {
         vup: Vec3,
         defocus_angle: f64,
         focus_dist: f64,
-        event_transmitter: EventLoopProxy<Events>,
+        event_transmitter: Option<EventLoopProxy<Events>>,
     ) -> Self {
         // Viewport
         let theta = f64::to_radians(fov);
@@ -241,7 +244,14 @@ impl Camera {
             Self::offset_lattice(&cam.pixel_delta_v, &cam.pixel_delta_u, samples_sqrt);
         let offsets: Arc<[Vec3]> = offsets.as_slice().into();
 
-        let mut render_pool = ThreadPool::default()?;
+        // let mut render_pool = {
+        //     let max_threads = available_parallelism()?;
+
+        //     ThreadPool::new(max_threads)
+        // }?;
+
+        let render_pool = ThreadPoolBuilder::with_max_threads()?.build()?;
+
         let mut rand = XorShift::default();
 
         let (pixel_transmitter, pixel_reciever) = channel::<PixelRender>();
@@ -253,6 +263,8 @@ impl Camera {
         #[allow(clippy::cast_precision_loss)]
         let mut progress_bar =
             ProgressBar::new(MessageType::Info, "Sending jobs", cam.height() as f64)?;
+
+        assert!(cam.height() > 0 && cam.width() > 0);
 
         for height in 0..cam.height() {
             progress_bar.update()?;
@@ -275,8 +287,7 @@ impl Camera {
                         x_loc: width,
                         y_loc: height,
                     });
-                    // .expect("Couldn't send pixel back");
-                })?;
+                });
             }
         }
 
@@ -304,17 +315,27 @@ impl Camera {
             (cam.width() * cam.height()) as f64,
         )?;
 
-        while !render_pool.is_finished() && !render_pool.has_paniced() {
-            let pr = pixel_reciever.recv().expect("Couldn't get rendered pixel");
-            image_vec[pr.y_loc][pr.x_loc] = pr.color;
-            progress_bar.update()?;
-
-            if cam
-                .event_transmitter
-                .send_event(Events::RenderPixel(pr))
-                .is_err()
-            {
-                return Err(Box::new(UnableToSendPixelError {}));
+        if let Some(tx) = &cam.event_transmitter {
+            while render_pool.wait_until_job_done().is_ok() && !render_pool.is_finished() {
+                while let Ok(pr) = pixel_reciever.recv_timeout(Duration::ZERO) {
+                    image_vec[pr.y_loc][pr.x_loc] = pr.color;
+                    tx.send_event(Events::RenderPixel(pr))?;
+                    progress_bar.update()?;
+                }
+            }
+            // HACK: After it's finished make absolute sure we got every single pixel,
+            // can't think of a better fix
+            while let Ok(pr) = pixel_reciever.recv_timeout(Duration::ZERO) {
+                image_vec[pr.y_loc][pr.x_loc] = pr.color;
+                tx.send_event(Events::RenderPixel(pr))?;
+                progress_bar.update()?;
+            }
+        } else {
+            while render_pool.wait_until_job_done().is_ok() && !render_pool.is_finished() {
+                while let Ok(pr) = pixel_reciever.recv_timeout(Duration::ZERO) {
+                    image_vec[pr.y_loc][pr.x_loc] = pr.color;
+                    progress_bar.update()?;
+                }
             }
         }
 

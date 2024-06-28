@@ -14,6 +14,7 @@ use crate::{
     application::Events,
     space::{point3::Point3, vec3::Vec3},
     util::random::XorShift,
+    Config,
 };
 
 use self::{
@@ -38,8 +39,8 @@ const FOCAL_LENGTH: f64 = 1.0;
 
 const FOV: f64 = 20.;
 
-const SAMPLE_SQRT: usize = 20;
-const MAX_DEPTH: usize = 50;
+const SAMPLE_SQRT: usize = 5;
+const MAX_DEPTH: usize = 10;
 
 const LOOK_FROM: Point3 = Point3::new(13., 2., 3.);
 const LOOK_TO: Point3 = Point3::new(0., 0., 0.);
@@ -51,10 +52,13 @@ const FOCUS_DIST: f64 = 10.0;
 
 #[allow(dead_code)]
 pub fn complex(
-    width: usize,
-    height: usize,
-    event_loop_proxy: EventLoopProxy<Events>,
+    config: &Config,
+    proxy: Option<EventLoopProxy<Events>>,
 ) -> Result<(), Box<dyn Error>> {
+    let height = config.height;
+    let width = config.width;
+    let sample_sqrt = config.sample_sqrt;
+
     let mut world = SceneBuilder::new();
 
     let ground_mat = Arc::new(Lambertian::new(Color::new(0.5, 0.5, 0.5)));
@@ -109,20 +113,20 @@ pub fn complex(
         VUP,
         DEFOCUS_ANGLE,
         FOCUS_DIST,
-        event_loop_proxy,
+        proxy,
     );
 
     let world = world.build() as Arc<dyn Hittable>;
     // cam.render(&world, SAMPLE_SQRT)?;
 
     let cam = Arc::new(cam);
-    Camera::threaded_render(&cam, &world, SAMPLE_SQRT)?;
+    Camera::threaded_render(&cam, &world, sample_sqrt)?;
 
     Ok(())
 }
 
 #[allow(dead_code)]
-pub fn simple(event_loop_proxy: EventLoopProxy<Events>) -> Result<(), Box<dyn Error>> {
+pub fn simple(event_loop_proxy: Option<EventLoopProxy<Events>>) -> Result<(), Box<dyn Error>> {
     let cam = Camera::new(
         1080,
         1920,
@@ -169,7 +173,7 @@ pub fn simple(event_loop_proxy: EventLoopProxy<Events>) -> Result<(), Box<dyn Er
 }
 
 #[allow(dead_code)]
-pub fn threads(event_loop_proxy: EventLoopProxy<Events>) -> Result<(), Box<dyn Error>> {
+pub fn threads(event_loop_proxy: Option<EventLoopProxy<Events>>) -> Result<(), Box<dyn Error>> {
     let cam = Camera::new(
         1000,
         1000,
@@ -198,7 +202,9 @@ pub fn threads(event_loop_proxy: EventLoopProxy<Events>) -> Result<(), Box<dyn E
 }
 
 #[allow(dead_code)]
-pub fn super_simple(event_loop_proxy: EventLoopProxy<Events>) -> Result<(), Box<dyn Error>> {
+pub fn super_simple(
+    event_loop_proxy: Option<EventLoopProxy<Events>>,
+) -> Result<(), Box<dyn Error>> {
     let cam = Camera::new(
         1000,
         1000,

@@ -13,6 +13,7 @@ edition = "2021"
 # panic = "abort"
 
 [dependencies]
+easy-threadpool = "0.3.0"
 pixels = "0.13.0"
 terminal_size = "0.3.0"
 winit = { version = "0.29.10" , features = ["rwh_05"]}
