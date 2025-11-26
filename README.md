@@ -1,3 +1,6 @@
+# Moved to codeberg
+This repository has been moved to [Codeberg](https://codeberg.org/NicoElbers/Raytracing_in_a_weekend_rust)
+
 # Ray tracing in a weekend
 
 <!--toc:start-->
